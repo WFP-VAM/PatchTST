@@ -69,7 +69,7 @@ class PatchTST(nn.Module):
         #    [bs x num_patch x n_vars x patch_len] for pretrain
         return z
     
-     def capture_embedding(self,z):
+    def capture_embedding(self,z):
         encoder_output = self.backbone(z)                                                                # z: [bs x nvars x d_model x num_patch]
         return encoder_output
 
