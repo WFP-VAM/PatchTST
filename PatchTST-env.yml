@@ -8,3 +8,7 @@ dependencies:
   - hip-analysis >=0.2.0
   - pytorch==1.11.0
   - jupyterlab
+  - black
+  - isort
+  - ruff
+  - mypy
