@@ -63,6 +63,8 @@ class SeasonTST_Dataset(Dataset):
         self.__read_data__()
 
     def select_random_pixel(self):
+
+        # TODO: add a check for pixels in the ocean
         lat = np.random.randint(0, self.dataset.latitude.shape[0])
         lon = np.random.randint(0, self.dataset.longitude.shape[0])
         return lat, lon
