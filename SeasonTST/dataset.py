@@ -1,10 +1,11 @@
 import numpy
-from sklearn.preprocessing import StandardScaler
-from torch.utils.data import Dataset
-import xarray as xr
 import numpy as np
 import pandas as pd
 import torch
+import xarray as xr
+from sklearn.preprocessing import StandardScaler
+from torch.utils.data import Dataset
+
 
 class SeasonTST_Dataset(Dataset):
     def __init__(
@@ -15,11 +16,15 @@ class SeasonTST_Dataset(Dataset):
         split="train",
         scale=True,
     ):
-
         """
-        TODO:
+        BUG FIXES:
+        - SeasonTST_Dataset is currently instantiated separately for train, valid and test
+        see PatchTST_self_supervised/src/data/datamodule.py:44.
+        This means train, valid and test are done on different pixels!
 
-        dataset:
+
+        TODO:
+        Add validation checks for dataset argument:
         - expects spatial coordinates to be 'latitude', 'longitude'
         - expects dimension order to be time, lat , lon
 
@@ -44,14 +49,16 @@ class SeasonTST_Dataset(Dataset):
     def initialize_data_for_epoch(self):
         # Randomly select a pixel
         lat, lon = self.select_random_pixel()
+        print(
+            f"(lat, lon) selected for {self.split}:",
+            (self.dataset.latitude.values[lat], self.dataset.longitude.values[lon]),
+        )
 
         # while np.isnan(self.ndvi_xarray.isel(latitude=lat, longitude=lon, time=0).band.values) or np.isnan(self.rfh_xarray.isel(latitude=lat, longitude=lon, time=0).band.values):
         #     lat, lon = self.select_random_pixel()
         # Generate DataFrame for the selected pixel
-        if self.split == "test":
-            print("(lat, lon) selected for test:", (lat, lon))
-
         self.dataframe = self.generate_pixel_dataframe(lat, lon)
+
         # Read and split data
         self.__read_data__()
 
@@ -62,11 +69,14 @@ class SeasonTST_Dataset(Dataset):
 
     def generate_pixel_dataframe(self, lat, lon):
         # Extract pd.DataFrame for a lat, lon indices combination
-        df = pd.concat([
-            pd.DataFrame(self.dataset.get(var_name)[:, lat, lon], columns=[var_name])
-            for var_name in self.dataset.data_vars
-        ],
-            axis=1
+        df = pd.concat(
+            [
+                pd.DataFrame(
+                    self.dataset.get(var_name)[:, lat, lon], columns=[var_name]
+                )
+                for var_name in self.dataset.data_vars
+            ],
+            axis=1,
         )
 
         df["time"] = self.time_array
@@ -100,7 +110,7 @@ class SeasonTST_Dataset(Dataset):
             )
         random_start = np.random.randint(0, max_start_index)
 
-        s_begin = index
+        s_begin = random_start
         s_end = s_begin + self.seq_len
         r_begin = s_end
         r_end = r_begin + self.pred_len
@@ -119,4 +129,3 @@ class SeasonTST_Dataset(Dataset):
         if self.scale:
             return self.scaler.inverse_transform(data)
         return data
-
