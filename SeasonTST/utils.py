@@ -8,27 +8,22 @@ from PatchTST_self_supervised.src.callback.transforms import RevInCB
 from PatchTST_self_supervised.src.data.datamodule import DataLoaders
 from PatchTST_self_supervised.src.learner import Learner
 from PatchTST_self_supervised.src.models.patchTST import PatchTST
-from SeasonTST.dataset import Rain_Ndvi_Dataset
+from SeasonTST.dataset import SeasonTST_Dataset
 
 
 def get_dataloaders(
     config_obj: SimpleNamespace,
     dataset_class: Dataset,
     dataset: xr.Dataset,
-    lat: float = 0.0,
-    lon: float = 0.0,
 ):
     size = [config_obj.sequence_length, 0, config_obj.prediction_length]
     dls = DataLoaders(
         datasetCls=dataset_class,
         dataset_kwargs={
-            "ndvi_array": ndvi_array,
-            "rfh_array": rfh_array,
-            "time_array": time_array,
+            "dataset": dataset,
+            "time_array": dataset.time.values,
             "size": size,
             "scale": True,
-            "lat_index": lat,
-            "lon_index": lon,
         },
         batch_size=config_obj.batch_size,
         workers=config_obj.num_workers,
@@ -83,7 +78,7 @@ def find_learning_rate(config_obj):
     """
 
     # get dataloader
-    dls = get_dataloaders(config_obj, Rain_Ndvi_Dataset)
+    dls = get_dataloaders(config_obj, SeasonTST_Dataset)
     model = get_model(config_obj)
     # get loss
     loss_func = torch.nn.MSELoss(reduction="mean")

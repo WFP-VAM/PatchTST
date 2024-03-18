@@ -1,6 +1,6 @@
 import sys
 
-from SeasonTST.dataset import Rain_Ndvi_Dataset
+from SeasonTST.dataset import SeasonTST_Dataset
 from SeasonTST.utils import find_learning_rate, get_dataloaders, get_model
 
 sys.path.append("../PatchTST_self_supervised/")
@@ -117,7 +117,7 @@ def pretrain_func(save_pretrained_model, save_path, lr=suggested_lr):
     print(save_path)
 
     # get dataloader
-    dls = get_dataloaders(config_obj, Rain_Ndvi_Dataset)
+    dls = get_dataloaders(config_obj, SeasonTST_Dataset)
     # get model
     model = get_model(config_obj)
     # pretrained_model_path = "saved_models/masked_patchtst/patchtst_pretrained_cw36_patch5_stride5_epochs-pretrain2000_mask0.4_model4.pth"

@@ -1,20 +1,30 @@
 import numpy
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset
+import xarray as xr
+import numpy as np
+import pandas as pd
+import torch
 
-
-class Rain_Ndvi_Dataset(Dataset):
+class SeasonTST_Dataset(Dataset):
     def __init__(
         self,
-        ndvi_array,
-        rfh_array,
+        dataset: xr.Dataset,
         time_array,
-        lat_index,
-        lon_index,
         size=None,
         split="train",
         scale=True,
     ):
+
+        """
+        TODO:
+
+        dataset:
+        - expects spatial coordinates to be 'latitude', 'longitude'
+        - expects dimension order to be time, lat , lon
+
+        """
+
         if size is None:
             self.seq_len = 30
             self.label_len = 10
@@ -25,14 +35,9 @@ class Rain_Ndvi_Dataset(Dataset):
         assert split in ["train", "val", "test"]
         self.split = split
         self.scale = scale
-        # self.ndvi_xarray = ndvi_xarray
-        # self.rfh_xarray = rfh_xarray
-        self.ndvi_array = ndvi_array
-        self.rfh_array = rfh_array
+        self.dataset = dataset
         self.time_array = time_array
-        self.features = ["rfh", "ndvi"]
-        self.lat_index = lat_index
-        self.lon_index = lon_index
+        self.features = list(dataset.data_vars.keys())
 
         self.initialize_data_for_epoch()
 
@@ -51,27 +56,22 @@ class Rain_Ndvi_Dataset(Dataset):
         self.__read_data__()
 
     def select_random_pixel(self):
-        lat = np.random.randint(0, self.rfh_xarray.latitude.shape[0])
-        lon = np.random.randint(0, self.rfh_xarray.longitude.shape[0])
+        lat = np.random.randint(0, self.dataset.latitude.shape[0])
+        lon = np.random.randint(0, self.dataset.longitude.shape[0])
         return lat, lon
 
     def generate_pixel_dataframe(self, lat, lon):
-        ndvi_df = pd.DataFrame(self.ndvi_array[:, lat, lon], columns=["band"])
-        time_values = self.time_array
-        ndvi_df = ndvi_df.reset_index()
-        ndvi_df["time"] = time_values
-        ndvi = ndvi_df[["time", "band"]]
-        ndvi.rename(columns={"band": "ndvi"}, inplace=True)
-        ndvi.set_index("time", inplace=True)
+        # Extract pd.DataFrame for a lat, lon indices combination
+        df = pd.concat([
+            pd.DataFrame(self.dataset.get(var_name)[:, lat, lon], columns=[var_name])
+            for var_name in self.dataset.data_vars
+        ],
+            axis=1
+        )
 
-        rfh_df = pd.DataFrame(self.rfh_array[:, lat, lon], columns=["band"])
-        time_values = self.time_array
-        rfh_df = rfh_df.reset_index()
-        rfh_df["time"] = time_values
-        rfh = rfh_df[["time", "band"]]
-        rfh.rename(columns={"band": "rfh"}, inplace=True)
-        rfh.set_index("time", inplace=True)
-        df = pd.concat([rfh, ndvi], axis=1)
+        df["time"] = self.time_array
+        df.set_index("time", inplace=True)
+
         return df
 
     def __read_data__(self):
@@ -120,10 +120,3 @@ class Rain_Ndvi_Dataset(Dataset):
             return self.scaler.inverse_transform(data)
         return data
 
-    def __len__(self):
-        return len(self.data) - self.seq_len - self.pred_len + 1
-
-    def inverse_transform(self, data):
-        if self.scale:
-            return self.scaler.inverse_transform(data)
-        return data
