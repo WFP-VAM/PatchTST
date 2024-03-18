@@ -3,7 +3,7 @@ import sys
 from SeasonTST.dataset import Rain_Ndvi_Dataset
 from SeasonTST.utils import get_dataloaders, get_model, find_learning_rate
 
-sys.path.append("./PatchTST_self_supervised/")
+sys.path.append("../PatchTST_self_supervised/")
 from types import SimpleNamespace
 import xarray as xr
 import torch
@@ -20,7 +20,7 @@ from PatchTST_self_supervised.datautils import *
 
 
 
-PATH = "./"
+PATH = "../"
 
 ds_full = xr.open_zarr("s3://wfp-ops-userdata/public-share/ndvi_world.zarr")
 
