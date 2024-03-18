@@ -5,8 +5,19 @@ from PatchTST_self_supervised.src.learner import Learner
 from PatchTST_self_supervised.src.models.patchTST import PatchTST
 from SeasonTST.dataset import Rain_Ndvi_Dataset
 
+from types import SimpleNamespace
 
-def get_dataloaders(config_obj, dataset_class, lat, lon):
+import xarray as xr
+from torch.utils.data import Dataset
+
+
+def get_dataloaders(
+        config_obj: SimpleNamespace,
+        dataset_class: Dataset,
+        dataset: xr.Dataset,
+        lat: float =  0.0,
+        lon: float = 0.0
+):
     size = [config_obj.sequence_length, 0, config_obj.prediction_length]
     dls = DataLoaders(
             datasetCls=dataset_class,
