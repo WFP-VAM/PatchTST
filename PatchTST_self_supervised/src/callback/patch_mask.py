@@ -55,15 +55,17 @@ class PatchMaskCB(Callback):
         """
         xb_patch, num_patch = create_patch(self.xb, self.patch_len, self.stride)    # xb_patch: [bs x num_patch x n_vars x patch_len]
         xb_mask, _, self.mask, _ = random_masking(xb_patch, self.mask_ratio)   # xb_mask: [bs x num_patch x n_vars x patch_len]
+        print("Mean mask incidence:", self.mask.mean())
         self.mask = self.mask.bool()    # mask: [bs x num_patch x n_vars]
         self.learner.xb = xb_mask       # learner.xb: masked 4D tensor    
         self.learner.yb = xb_patch      # learner.yb: non-masked 4d tensor
- 
+
     def _loss(self, preds, target):        
         """
         preds:   [bs x num_patch x n_vars x patch_len]
         targets: [bs x num_patch x n_vars x patch_len] 
         """
+        print("PatchMaskCB Loss, pred and target shapes", preds.shape, target.shape)
         loss = (preds - target) ** 2
         loss = loss.mean(dim=-1)
         loss = (loss * self.mask).sum() / self.mask.sum()

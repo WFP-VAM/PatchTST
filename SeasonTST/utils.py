@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import xarray as xr
+import torch
 from torch.utils.data import Dataset
 
 from PatchTST_self_supervised.src.callback.patch_mask import PatchMaskCB
@@ -67,7 +68,7 @@ def get_model(config, headtype="pretrain"):
     return model
 
 
-def find_lr(config_obj):
+def find_lr(config_obj, dls):
     """
     # This method typically involves training the model for a few epochs with a range of learning rates and recording
     the loss at each step. The learning rate that gives the fastest decrease in loss is considered optimal or
@@ -77,8 +78,6 @@ def find_lr(config_obj):
     :return:
     """
 
-    # get dataloader
-    dls = get_dls(config_obj, SeasonTST_Dataset)
     model = get_model(config_obj)
     # get loss
     loss_func = torch.nn.MSELoss(reduction="mean")

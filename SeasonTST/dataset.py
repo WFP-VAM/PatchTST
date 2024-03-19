@@ -13,6 +13,9 @@ class SeasonTST_Dataset(Dataset):
         dataset: xr.Dataset,
         time_array,
         size=None,
+        pixels_per_epoch=1,
+        train_size=.33,
+        val_size=.33,
         split="train",
         scale=True,
     ):
@@ -39,19 +42,35 @@ class SeasonTST_Dataset(Dataset):
 
         assert split in ["train", "val", "test"]
         self.split = split
+        self.train_size = train_size
+        self.val_size = val_size
         self.scale = scale
         self.dataset = dataset
         self.time_array = time_array
+        self.pixels_per_epoch = pixels_per_epoch
         self.features = list(dataset.data_vars.keys())
+        self.set_split_data_length()
 
         self.initialize_data_for_epoch()
+
+    def set_split_data_length(self):
+        self.train_n = int(self.train_size * len(self.time_array))
+        self.val_n = int(self.val_size * len(self.time_array))
+        self.test_n = len(self.time_array) - self.val_n - self.train_n
+        if self.split == "train":
+            self.data_length = self.train_n
+        elif self.split == "val":
+            self.data_length = self.val_n
+        else:
+            self.data_length = self.test_n
+        self.items_per_pixel = self.data_length - self.seq_len - self.pred_len + 1
 
     def initialize_data_for_epoch(self):
         # Randomly select a pixel
         lat, lon = self.select_random_pixel()
         print(
             f"(lat, lon) selected for {self.split}:",
-            (self.dataset.latitude.values[lat], self.dataset.longitude.values[lon]),
+            (self.lat, self.lon),
         )
 
         # while np.isnan(self.ndvi_xarray.isel(latitude=lat, longitude=lon, time=0).band.values) or np.isnan(self.rfh_xarray.isel(latitude=lat, longitude=lon, time=0).band.values):
@@ -67,6 +86,9 @@ class SeasonTST_Dataset(Dataset):
         # TODO: add a check for pixels in the ocean
         lat = np.random.randint(0, self.dataset.latitude.shape[0])
         lon = np.random.randint(0, self.dataset.longitude.shape[0])
+
+        self.lat = self.dataset.latitude.values[lat]
+        self.lon = self.dataset.longitude.values[lon]
         return lat, lon
 
     def generate_pixel_dataframe(self, lat, lon):
@@ -93,23 +115,18 @@ class SeasonTST_Dataset(Dataset):
             self.scaler = StandardScaler()
             df[self.features] = self.scaler.fit_transform(df[self.features])
 
-        train_size = int(0.7 * len(df))
-        val_size = int(0.15 * len(df))
 
         if self.split == "train":
-            self.data = df.iloc[:train_size]
+            self.data = df.iloc[:self.train_n]
+            print(self.data.index.min(), self.data.index.max())
         elif self.split == "val":
-            self.data = df.iloc[train_size : train_size + val_size]
+            self.data = df.iloc[self.train_n : self.train_n + self.val_n]
+            print(self.data.index.min(), self.data.index.max())
         else:
-            self.data = df.iloc[train_size + val_size :]
+            self.data = df.iloc[self.train_n + self.val_n :]
+            print(self.data.index.min(), self.data.index.max())
 
     def __getitem__(self, index):
-
-        max_start_index = len(self.data) - self.seq_len - self.pred_len
-        if max_start_index < 0:
-            raise ValueError(
-                "Dataset is too small for the specified sequence and prediction lengths."
-            )
 
         s_begin = index
         s_end = s_begin + self.seq_len
@@ -124,7 +141,7 @@ class SeasonTST_Dataset(Dataset):
         )
 
     def __len__(self):
-        return len(self.data) - self.seq_len - self.pred_len + 1
+        return self.pixels_per_epoch * self.items_per_pixel
 
     def inverse_transform(self, data):
         if self.scale:
