@@ -5,7 +5,7 @@ import pandas as pd
 import xarray as xr
 
 from SeasonTST.dataset import SeasonTST_Dataset
-from SeasonTST.utils import get_dataloaders
+from SeasonTST.utils import get_dls
 
 config = {
     "c_in": 2,  # number of variables
@@ -29,7 +29,7 @@ standardized_indicators = xr.open_zarr(PREFIX + "CDI/standardized_indicators_AFv
 
 
 # Creates train valid and test datasets for one epoch. Notice that they are in different locations!
-dls = get_dataloaders(config_obj, SeasonTST_Dataset, standardized_indicators)
+dls = get_dls(config_obj, SeasonTST_Dataset, standardized_indicators)
 
 # Extract a batch
 train_features, train_labels = next(iter(dls.test))

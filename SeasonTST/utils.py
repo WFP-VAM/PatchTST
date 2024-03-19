@@ -11,7 +11,7 @@ from PatchTST_self_supervised.src.models.patchTST import PatchTST
 from SeasonTST.dataset import SeasonTST_Dataset
 
 
-def get_dataloaders(
+def get_dls(
     config_obj: SimpleNamespace,
     dataset_class: Dataset,
     dataset: xr.Dataset,
@@ -67,7 +67,7 @@ def get_model(config, headtype="pretrain"):
     return model
 
 
-def find_learning_rate(config_obj):
+def find_lr(config_obj):
     """
     # This method typically involves training the model for a few epochs with a range of learning rates and recording
     the loss at each step. The learning rate that gives the fastest decrease in loss is considered optimal or
@@ -78,7 +78,7 @@ def find_learning_rate(config_obj):
     """
 
     # get dataloader
-    dls = get_dataloaders(config_obj, SeasonTST_Dataset)
+    dls = get_dls(config_obj, SeasonTST_Dataset)
     model = get_model(config_obj)
     # get loss
     loss_func = torch.nn.MSELoss(reduction="mean")
