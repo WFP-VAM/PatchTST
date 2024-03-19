@@ -104,15 +104,14 @@ class SeasonTST_Dataset(Dataset):
             self.data = df.iloc[train_size + val_size :]
 
     def __getitem__(self, index):
-        # Choose a random start index for the sequence
+
         max_start_index = len(self.data) - self.seq_len - self.pred_len
-        if max_start_index < 1:
+        if max_start_index < 0:
             raise ValueError(
                 "Dataset is too small for the specified sequence and prediction lengths."
             )
-        random_start = np.random.randint(0, max_start_index)
 
-        s_begin = random_start
+        s_begin = index
         s_end = s_begin + self.seq_len
         r_begin = s_end
         r_end = r_begin + self.pred_len
