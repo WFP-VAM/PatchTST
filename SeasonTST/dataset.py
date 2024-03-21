@@ -1,21 +1,30 @@
+import json
+import time
+from typing import Optional
+
+import dask
 import numpy
 import numpy as np
 import pandas as pd
 import torch
 import xarray as xr
+import xbatcher
 from sklearn.preprocessing import StandardScaler
-from torch.utils.data import Dataset
+from torch import multiprocessing
+from torch.utils.data import DataLoader
+from torch.utils.data import Dataset as TorchDataset
+from typing_extensions import Annotated
 
 
-class SeasonTST_Dataset(Dataset):
+class SeasonTST_Dataset_Old(TorchDataset):
     def __init__(
         self,
         dataset: xr.Dataset,
         time_array,
         size=None,
         pixels_per_epoch=1,
-        train_size=.33,
-        val_size=.33,
+        train_size=0.33,
+        val_size=0.33,
         split="train",
         scale=True,
     ):
@@ -115,9 +124,8 @@ class SeasonTST_Dataset(Dataset):
             self.scaler = StandardScaler()
             df[self.features] = self.scaler.fit_transform(df[self.features])
 
-
         if self.split == "train":
-            self.data = df.iloc[:self.train_n]
+            self.data = df.iloc[: self.train_n]
             print(self.data.index.min(), self.data.index.max())
         elif self.split == "val":
             self.data = df.iloc[self.train_n : self.train_n + self.val_n]
@@ -147,3 +155,133 @@ class SeasonTST_Dataset(Dataset):
         if self.scale:
             return self.scaler.inverse_transform(data)
         return data
+
+
+def print_json(obj):
+    print(json.dumps(obj))
+
+
+class SeasonTST_Dataset(TorchDataset):
+    """
+
+
+    Ispired by:
+    - https://earthmover.io/blog/cloud-native-dataloader
+    - https://github.com/earth-mover/dataloader-demo
+
+    """
+
+    def __init__(
+        self,
+        dataset: xr.Dataset,
+        size=None,
+        train_size=0.33,
+        val_size=0.33,
+        split="train",
+        scale=True,
+    ):
+
+        if size is None:
+            self.seq_len = 36
+            self.label_len = 0
+            self.pred_len = 9
+        else:
+            self.seq_len, self.label_len, self.pred_len = size
+
+        assert split in ["train", "val", "test"]
+        self.split = split
+
+        """
+        TODO: Add validation checks for dataset argument:
+            - expects spatial coordinates to be 'latitude', 'longitude'
+            - expects dimension order to be time, lat , lon
+        """
+        self.dataset = dataset
+        self.features = list(dataset.data_vars.keys())
+
+        self.train_size = train_size
+        self.val_size = val_size
+        self.set_split_time_idxs()
+
+        # TODO: StandardScaling is not currently implemented
+        self.scale = scale
+
+        # Create generator of batches of size extracted from the dataset
+        self.set_batch_generator()
+
+    def set_split_time_idxs(self):
+        """
+        self.dataset is split into train, val and test across time. This function identifies the relevant time_idxs
+        for slicing
+        """
+
+        self.train_n = int(self.train_size * len(self.dataset.time))
+        self.val_n = int(self.val_size * len(self.dataset.time))
+        self.test_n = len(self.dataset.time) - self.val_n - self.train_n
+        if self.split == "train":
+
+            self.time_idxs = (None, self.train_n)
+        elif self.split == "val":
+            self.time_idxs = (self.train_n, self.train_n + self.val_n)
+        else:
+            self.time_idxs = (self.train_n + self.val_n, None)
+
+    def get_split_dataset(self):
+        return self.dataset.isel(time=slice(*self.time_idxs))
+
+    def set_batch_generator(self):
+
+        data = self.get_split_dataset()
+
+        series_len = self.seq_len + self.label_len + self.pred_len
+
+        # For info: https://xbatcher.readthedocs.io/en/latest/demo.html
+        self.batch_gen = data.batch.generator(
+            input_dims={"time": series_len, "longitude": 1, "latitude": 1},
+            input_overlap={"time": series_len - 1},
+            preload_batch=False,
+        )
+
+    def __len__(self):
+        return len(self.batch_gen)
+
+    def __getitem__(self, idx):
+        # t0 = time.time()
+        # print_json(
+        #     {
+        #         "event": "get-batch start",
+        #         "time": t0,
+        #         "idx": idx,
+        #         "pid": multiprocessing.current_process().pid,
+        #     }
+        # )
+        # load before stacking
+        batch = self.batch_gen[idx].load()
+        print(batch.latitude.values, batch.longitude.values)
+
+        # Stack to [time x var] shape
+        stacked = (
+            batch.to_stacked_array(
+                new_dim="var", sample_dims=("time", "latitude", "longitude")
+            )
+            .squeeze()
+            .transpose("time", "var", ...)
+        )
+
+        # Split time axis into input and ouput
+        x = stacked.isel(time=slice(None, self.seq_len))
+        y = stacked.isel(time=slice(self.seq_len, None))
+
+        # t1 = time.time()
+        # print_json(
+        #     {
+        #         "event": "get-batch end",
+        #         "time": t1,
+        #         "idx": idx,
+        #         "pid": multiprocessing.current_process().pid,
+        #         "duration": t1 - t0,
+        #     }
+        # )
+        return torch.tensor(x.data, dtype=torch.float32), torch.tensor(
+            y.data, dtype=torch.float32
+        )

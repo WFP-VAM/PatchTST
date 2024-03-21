@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
-import xarray as xr
 import torch
+import xarray as xr
 from torch.utils.data import Dataset
 
 from PatchTST_self_supervised.src.callback.patch_mask import PatchMaskCB
@@ -22,7 +22,6 @@ def get_dls(
         datasetCls=dataset_class,
         dataset_kwargs={
             "dataset": dataset,
-            "time_array": dataset.time.values,
             "size": size,
             "scale": True,
         },
@@ -103,3 +102,16 @@ def find_lr(config_obj, dls):
     suggested_lr = learn.lr_finder()
     print("suggested_lr", suggested_lr)
     return suggested_lr
+
+
+def plot_loss(train_loss, valid_loss, save_path):
+    plt.clf()
+    plt.plot(train_loss, label="Train Loss")
+    plt.plot(valid_loss, label="Validation Loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title(f"Loss after Epoch {epoch}")
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(os.path.join(save_path, f"loss_plot_epoch.png"))
+    plt.show()
