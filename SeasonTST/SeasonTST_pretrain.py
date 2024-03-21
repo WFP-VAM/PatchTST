@@ -1,18 +1,22 @@
-from types import SimpleNamespace
 import os
-import xarray as xr
-import torch
+from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
+import torch
+import xarray as xr
+from dask.cache import Cache
 
 from PatchTST_self_supervised.src.callback.patch_mask import PatchMaskCB
 from PatchTST_self_supervised.src.callback.tracking import SaveModelCB
 from PatchTST_self_supervised.src.callback.transforms import RevInCB
 from PatchTST_self_supervised.src.learner import Learner, transfer_weights
-
 from SeasonTST.dataset import SeasonTST_Dataset
-from SeasonTST.utils import get_dls, find_lr, get_model
+from SeasonTST.utils import find_lr, get_dls, get_model
+
+# Set up Dask's cache. Will reduce repeat reads from zarr and speed up data loading
+cache = Cache(1e10)  # 10gb cache
+cache.register()
 
 
 def pretrain_func(save_pretrained_model, save_path, config_obj, dls, lr=0.001):
@@ -38,7 +42,7 @@ def pretrain_func(save_pretrained_model, save_path, config_obj, dls, lr=0.001):
             mask_ratio=config_obj.mask_ratio,
         ),
         SaveModelCB(monitor="valid_loss", fname=save_pretrained_model, path=save_path),
-        Mix()
+        Mix(),
     ]
     # define learner
     learn = Learner(
@@ -70,7 +74,7 @@ config = {
     "sequence_length": 36,
     "prediction_length": 9,
     "patch_len": 4,  # Length of the patch
-    "stride": 4,
+    "stride": 4,  # Minimum non-overlap between patchs. If equal to patch_len , patches will not overlap
     "revin": 1,  # reversible instance normalization
     "mask_ratio": 0.4,  # masking ratio for the input
     "lr": 1e-3,
@@ -85,7 +89,9 @@ config_obj = SimpleNamespace(**config)
 # Load dataset. Ensure it has no nans
 PREFIX = "https://data.earthobservation.vam.wfp.org/public-share/"
 standardized_indicators = xr.open_zarr(PREFIX + "CDI/standardized_indicators_AFv2")
-data = standardized_indicators.sel(longitude=slice(15,30), latitude=slice(0,-20), time=slice('2003-01-01',None))
+data = standardized_indicators.sel(
+    longitude=slice(15, 18), latitude=slice(0, -3), time=slice("2003-01-01", None)
+)
 data = data.where(data.notnull(), -99)
 
 
