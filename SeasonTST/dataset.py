@@ -154,7 +154,8 @@ class SeasonTST_Dataset_Old(TorchDataset):
 
 class SeasonTST_Dataset(TorchDataset):
     """
-
+    Subclass of Torch Dataset to accept any arbitrary xr.Dataset and creates batches using xbatcher.
+    Together with shuffle=True, this achieves randomization of the extracted series across time and space.
 
     Ispired by:
     - https://earthmover.io/blog/cloud-native-dataloader
