@@ -1,19 +1,14 @@
-import json
+import logging
+import multiprocessing
 import time
-from typing import Optional
 
-import dask
-import numpy
 import numpy as np
 import pandas as pd
 import torch
 import xarray as xr
 import xbatcher
 from sklearn.preprocessing import StandardScaler
-from torch import multiprocessing
-from torch.utils.data import DataLoader
 from torch.utils.data import Dataset as TorchDataset
-from typing_extensions import Annotated
 
 
 class SeasonTST_Dataset_Old(TorchDataset):
@@ -157,10 +152,6 @@ class SeasonTST_Dataset_Old(TorchDataset):
         return data
 
 
-def print_json(obj):
-    print(json.dumps(obj))
-
-
 class SeasonTST_Dataset(TorchDataset):
     """
 
@@ -246,18 +237,18 @@ class SeasonTST_Dataset(TorchDataset):
         return len(self.batch_gen)
 
     def __getitem__(self, idx):
-        # t0 = time.time()
-        # print_json(
-        #     {
-        #         "event": "get-batch start",
-        #         "time": t0,
-        #         "idx": idx,
-        #         "pid": multiprocessing.current_process().pid,
-        #     }
-        # )
+        t0 = time.time()
+        logging.debug(
+            {
+                "event": "get-batch start",
+                "time": t0,
+                "idx": idx,
+                "pid": multiprocessing.current_process().pid,
+            }
+        )
         # load before stacking
         batch = self.batch_gen[idx].load()
-        print(batch.latitude.values, batch.longitude.values)
+        logging.debug(f"{batch.latitude.values}, {batch.longitude.values}")
 
         # Stack to [time x var] shape
         stacked = (
@@ -272,16 +263,16 @@ class SeasonTST_Dataset(TorchDataset):
         x = stacked.isel(time=slice(None, self.seq_len))
         y = stacked.isel(time=slice(self.seq_len, None))
 
-        # t1 = time.time()
-        # print_json(
-        #     {
-        #         "event": "get-batch end",
-        #         "time": t1,
-        #         "idx": idx,
-        #         "pid": multiprocessing.current_process().pid,
-        #         "duration": t1 - t0,
-        #     }
-        # )
+        t1 = time.time()
+        logging.debug(
+            {
+                "event": "get-batch end",
+                "time": t1,
+                "idx": idx,
+                "pid": multiprocessing.current_process().pid,
+                "duration": t1 - t0,
+            }
+        )
         return torch.tensor(x.data, dtype=torch.float32), torch.tensor(
             y.data, dtype=torch.float32
         )

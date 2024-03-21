@@ -4,7 +4,7 @@ import torch
 from torch.optim import Adam
 from torch import nn
 from torch.nn.parallel import DistributedDataParallel
-
+import time
 from .basics import *
 from .callback.core import * 
 from .callback.tracking import * 
@@ -13,7 +13,8 @@ from .callback.distributed import *
 from .utils import *
 from pathlib import Path
 from tqdm import tqdm
-
+import multiprocessing
+import logging
 import numpy as np
 
 from sklearn.base import BaseEstimator
@@ -170,12 +171,23 @@ class Learner(GetAttr):
         self.opt.step() 
 
     def train_step(self, batch):
+        t0 = time.time()
         # get the inputs
         self.xb, self.yb = batch
         # forward
         pred = self.model_forward()
         # compute loss
         loss = self.loss_func(pred, self.yb)
+        t1 = time.time()
+        logging.debug(
+            {
+                "event": "train end",
+                "time": t1,
+                "idx": None,
+                "pid": multiprocessing.current_process().pid,
+                "duration": t1 - t0,
+            }
+        )
         return pred, loss
 
     def model_forward(self):

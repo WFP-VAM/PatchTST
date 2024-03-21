@@ -18,6 +18,11 @@ from SeasonTST.utils import find_lr, get_dls, get_model
 cache = Cache(1e10)  # 10gb cache
 cache.register()
 
+import logging
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(filename="train.log", encoding="utf-8", level=logging.DEBUG)
+
 
 def pretrain_func(save_pretrained_model, save_path, config_obj, dls, lr=0.001):
 
@@ -99,6 +104,8 @@ data = data.where(data.notnull(), -99)
 dls = get_dls(config_obj, SeasonTST_Dataset, data)
 
 suggested_lr = find_lr(config_obj, dls)
+# This is what I got on a small dataset. In case one wants to skip this for testing.
+# suggested_lr = 0.00020565123083486514
 
 save_pretrained_model = (
     "patchtst_pretrained_cw"
