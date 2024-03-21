@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(filename="train.log", encoding="utf-8", level=logging.DEBUG)
 
 
-def pretrain_func(save_pretrained_model, save_path, config_obj, dls, lr=0.001):
+def pretrain_func(save_pretrained_model, save_path, config_obj, model, dls, lr=0.001):
 
     if not os.path.exists(save_path):
         os.makedirs(save_path)
@@ -33,7 +33,7 @@ def pretrain_func(save_pretrained_model, save_path, config_obj, dls, lr=0.001):
 
     # get dataloader
     # get model
-    model = get_model(config_obj)
+
     # pretrained_model_path = "saved_models/masked_patchtst/patchtst_pretrained_cw36_patch5_stride5_epochs-pretrain2000_mask0.4_model4.pth"
     # model = transfer_weights(pretrained_model_path, model)
     # get loss
@@ -47,7 +47,6 @@ def pretrain_func(save_pretrained_model, save_path, config_obj, dls, lr=0.001):
             mask_ratio=config_obj.mask_ratio,
         ),
         SaveModelCB(monitor="valid_loss", fname=save_pretrained_model, path=save_path),
-        Mix(),
     ]
     # define learner
     learn = Learner(
@@ -85,7 +84,7 @@ config = {
     "lr": 1e-3,
     "batch_size": 128,
     "num_workers": 0,
-    "n_epochs_pretrain": 10,  # number of pre-training epochs
+    "n_epochs_pretrain": 1,  # number of pre-training epochs
     "pretrained_model_id": 2500,  # id of the saved pretrained model
 }
 
@@ -95,7 +94,7 @@ config_obj = SimpleNamespace(**config)
 PREFIX = "https://data.earthobservation.vam.wfp.org/public-share/"
 standardized_indicators = xr.open_zarr(PREFIX + "CDI/standardized_indicators_AFv2")
 data = standardized_indicators.sel(
-    longitude=slice(15, 18), latitude=slice(0, -3), time=slice("2003-01-01", None)
+    longitude=slice(15, 16), latitude=slice(0, -1), time=slice("2003-01-01", None)
 )
 data = data.where(data.notnull(), -99)
 
@@ -103,9 +102,11 @@ data = data.where(data.notnull(), -99)
 # Creates train valid and test datasets for one epoch. Notice that they are in different locations!
 dls = get_dls(config_obj, SeasonTST_Dataset, data)
 
-suggested_lr = find_lr(config_obj, dls)
+model = get_model(config_obj)
+
+# suggested_lr = find_lr(config_obj, dls)
 # This is what I got on a small dataset. In case one wants to skip this for testing.
-# suggested_lr = 0.00020565123083486514
+suggested_lr = 0.00020565123083486514
 
 save_pretrained_model = (
     "patchtst_pretrained_cw"
@@ -122,7 +123,7 @@ save_pretrained_model = (
     + str(config_obj.pretrained_model_id)
 )
 save_path = "saved_models" + "/masked_patchtst/"
-pretrain_func(save_pretrained_model, save_path, config_obj, dls, suggested_lr)
+pretrain_func(save_pretrained_model, save_path, config_obj, model, dls, suggested_lr)
 
 pretrained_model_name = save_path + save_pretrained_model + ".pth"
 
