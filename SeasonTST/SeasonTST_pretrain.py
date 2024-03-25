@@ -19,9 +19,16 @@ cache = Cache(1e10)  # 10gb cache
 cache.register()
 
 import logging
+import datetime
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(filename="train.log", encoding="utf-8", level=logging.DEBUG)
+logging.basicConfig(
+    format="%(asctime)s %(levelname)s %(module)s - %(funcName)s: %(message)s",
+    datefmt="%m/%d/%Y %I:%M:%S %p",
+    filename=f'{datetime.datetime.now().strftime("%Y_%m_%d_%I:%M")}_train.log',
+    encoding="utf-8",
+    level=logging.DEBUG,
+)
 
 
 def pretrain_func(save_pretrained_model, save_path, config_obj, model, dls, lr=0.001):
@@ -76,7 +83,7 @@ def pretrain_func(save_pretrained_model, save_path, config_obj, model, dls, lr=0
 config = {
     "c_in": 8,  # number of variables
     "sequence_length": 36,
-    "prediction_length": 9,
+    "prediction_length": 0,
     "patch_len": 4,  # Length of the patch
     "stride": 4,  # Minimum non-overlap between patchs. If equal to patch_len , patches will not overlap
     "revin": 1,  # reversible instance normalization

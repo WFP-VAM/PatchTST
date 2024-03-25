@@ -1,4 +1,4 @@
-
+import logging
 from typing import List
 import torch
 from torch.optim import Adam
@@ -378,7 +378,9 @@ class Learner(GetAttr):
     def __call__(self, name):        
         for cb in self.cbs: 
             attr = getattr(cb, name)
-            if attr is not None: attr()
+            if attr is not None:
+                logging.info(f'Running {attr}')
+                attr()
           
 
     def save(self, fname, path, **kwargs):
