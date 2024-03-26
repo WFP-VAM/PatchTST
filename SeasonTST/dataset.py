@@ -166,6 +166,7 @@ class SeasonTST_Dataset(TorchDataset):
     def __init__(
         self,
         dataset: xr.Dataset,
+        mask: xr.DataArray,
         size=None,
         train_size=0.33,
         val_size=0.33,
@@ -189,6 +190,7 @@ class SeasonTST_Dataset(TorchDataset):
             - expects dimension order to be time, lat , lon
         """
         self.dataset = dataset
+        self.mask = mask
         self.features = list(dataset.data_vars.keys())
 
         self.train_size = train_size
@@ -247,9 +249,19 @@ class SeasonTST_Dataset(TorchDataset):
                 "pid": multiprocessing.current_process().pid,
             }
         )
+
         # load before stacking
         batch = self.batch_gen[idx].load()
-        logging.debug(f"{batch.latitude.values}, {batch.longitude.values}, {batch.time.values[0]}")
+        logging.debug(
+            f"{batch.latitude.values}, {batch.longitude.values}, {batch.time.values[0]}"
+        )
+        # print(idx)
+
+        # if selected pixel is over ocean get another
+        # while self.mask.sel(latitude=batch.latitude.values,longitude=batch.longitude.values).values==-99:
+        # select another index somehow
+        # newidx =
+        # batch = self.batch_gen[newidx].load()
 
         # Stack to [time x var] shape
         stacked = (

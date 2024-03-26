@@ -14,12 +14,17 @@ from PatchTST_self_supervised.src.learner import Learner, transfer_weights
 from SeasonTST.dataset import SeasonTST_Dataset
 from SeasonTST.utils import find_lr, get_dls, get_model
 
+# adding PatchTST to the system path (necessary for windows machines)
+#import sys
+#sys.path.insert(0, r"C:\Users\15133\Documents\WFP\PatchTST")
+
+
 # Set up Dask's cache. Will reduce repeat reads from zarr and speed up data loading
 cache = Cache(1e10)  # 10gb cache
 cache.register()
 
-import logging
 import datetime
+import logging
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -81,7 +86,7 @@ def pretrain_func(save_pretrained_model, save_path, config_obj, model, dls, lr=0
 
 # Config parameters
 config = {
-    "c_in": 8,  # number of variables
+    "c_in": 5,  # number of variables
     "sequence_length": 36,
     "prediction_length": 0,
     "patch_len": 4,  # Length of the patch
@@ -99,15 +104,22 @@ config_obj = SimpleNamespace(**config)
 
 # Load dataset. Ensure it has no nans
 PREFIX = "https://data.earthobservation.vam.wfp.org/public-share/"
-standardized_indicators = xr.open_zarr(PREFIX + "CDI/standardized_indicators_AFv2")
+standardized_indicators = xr.open_zarr(PREFIX + "patchtst/Africa_data.zarr")
 data = standardized_indicators.sel(
-    longitude=slice(15, 16), latitude=slice(0, -1), time=slice("2003-01-01", None)
+    longitude=slice(9, 12), latitude=slice(-1, -3), time=slice("2003-01-01", None)
 )
 data = data.where(data.notnull(), -99)
+data = data.drop_vars("spatial_ref")
+data = data.transpose("time", "latitude", "longitude")
+# downselect to only every 5 pixels
+data = data.thin({"latitude": 5, "longitude": 5})
+# create ocean mask
+mask = data["RFH_DEKAD"][-1].where(data["RFH_DEKAD"][-1] == -99, 0)
+mask = mask.drop_duplicates(dim="longitude")
 
 
 # Creates train valid and test datasets for one epoch. Notice that they are in different locations!
-dls = get_dls(config_obj, SeasonTST_Dataset, data)
+dls = get_dls(config_obj, SeasonTST_Dataset, data, mask)
 
 model = get_model(config_obj)
 

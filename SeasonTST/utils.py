@@ -17,12 +17,14 @@ def get_dls(
     config_obj: SimpleNamespace,
     dataset_class: Dataset,
     dataset: xr.Dataset,
+    mask: xr.DataArray,
 ):
     size = [config_obj.sequence_length, 0, config_obj.prediction_length]
     dls = DataLoaders(
         datasetCls=dataset_class,
         dataset_kwargs={
             "dataset": dataset,
+            "mask": mask,
             "size": size,
             "scale": True,
         },
