@@ -7,6 +7,10 @@ import torch
 import xarray as xr
 from dask.cache import Cache
 
+# adding PatchTST to the system path (necessary for windows machines)
+#import sys
+#sys.path.insert(0, r"C:\Users\15133\Documents\WFP\PatchTST")
+
 from PatchTST_self_supervised.src.callback.patch_mask import PatchMaskCB
 from PatchTST_self_supervised.src.callback.tracking import SaveModelCB
 from PatchTST_self_supervised.src.callback.transforms import RevInCB
