@@ -249,7 +249,7 @@ class SeasonTST_Dataset(TorchDataset):
         )
         # load before stacking
         batch = self.batch_gen[idx].load()
-        logging.debug(f"{batch.latitude.values}, {batch.longitude.values}")
+        logging.debug(f"{batch.latitude.values}, {batch.longitude.values}, {batch.time.values[0]}")
 
         # Stack to [time x var] shape
         stacked = (

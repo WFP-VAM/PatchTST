@@ -1,4 +1,4 @@
-
+import logging
 import torch
 from torch import nn
 
@@ -145,6 +145,7 @@ class ObservationMaskCB(Callback):
         loss = (preds - target) ** 2
         loss = loss.mean(dim=0) # Mean across batch
         loss = (loss * self.mask).sum() / self.mask.sum() # Mean of means with mask
+        logging.debug(f"ObservationMaskCB custom loss: preds {preds.shape}, target {target.shape}, mask {self.mask.shape}")
         return loss
 
 def random_masking(xb, mask_ratio):

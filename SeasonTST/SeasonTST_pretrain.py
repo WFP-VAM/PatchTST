@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(module)s - %(funcName)s: %(message)s",
     datefmt="%m/%d/%Y %I:%M:%S %p",
-    filename=f'{datetime.datetime.now().strftime("%Y_%m_%d_%I:%M")}_train.log',
+    filename=f'log/{datetime.datetime.now().strftime("%Y_%m_%d_%I:%M")}_train.log',
     encoding="utf-8",
     level=logging.DEBUG,
 )

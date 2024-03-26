@@ -37,7 +37,7 @@ class Learner(GetAttr):
         self.set_opt()
         
         self.metrics = metrics
-        self.n_inp  = 2
+        self.n_inp  = 2 # Number of inputs
         # self.n_inp = self.dls.train.dataset.n_inp if self.dls else 0
         # Initialize callbacks                 
         if cbs and not isinstance(cbs, List): cbs = [cbs]    
@@ -188,6 +188,9 @@ class Learner(GetAttr):
                 "duration": t1 - t0,
             }
         )
+        logging.debug(f"xb {self.xb.shape}, yb {self.yb.shape}, pred {pred.shape}")
+        logging.debug(f"xb first element {self.xb[0,0,0,0]}")
+        logging.debug(f"yb first element {self.yb[0,0,0]}")
         return pred, loss
 
     def model_forward(self):
