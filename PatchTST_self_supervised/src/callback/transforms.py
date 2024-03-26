@@ -24,7 +24,8 @@ class RevInCB(Callback):
         self.revin = RevIN(num_features, eps, affine)
     
 
-    def before_forward(self): self.revin_norm()
+    def before_forward(self):
+        self.revin_norm()
     def after_forward(self): 
         if self.denorm: self.revin_denorm() 
         

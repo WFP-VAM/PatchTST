@@ -45,8 +45,10 @@ class SetupLearnerCB(Callback):
 
     def _to_device(self):
         batch = to_device(self.batch, self.device)        
-        if self.n_inp > 1: xb, yb = batch
-        else: xb, yb = batch, None        
+        if self.n_inp > 1:
+            xb, yb = batch
+        else:
+            xb, yb = batch, None
         self.learner.batch = xb, yb
         
     def before_fit(self): 
