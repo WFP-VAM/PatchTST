@@ -1,0 +1,17 @@
+name: PatchTST
+channels:
+  - conda-forge
+  - wfp-ram
+  - pytorch
+dependencies:
+  - python =3.10
+  - pip >=22
+  - hip-analysis >=0.2.0
+  - pytorch==1.11.0
+  - xbatcher
+  - cachey
+  - jupyterlab
+  - black
+  - isort
+  - ruff
+  - mypy
