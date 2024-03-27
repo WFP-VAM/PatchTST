@@ -29,7 +29,7 @@ class PatchCB(Callback):
 
 
 class PatchMaskCB(Callback):
-    def __init__(self, patch_len, stride, mask_ratio,
+    def __init__(self, patch_len, stride, mask_ratio, mask_value,
                         mask_when_pred:bool=False):
         """
         Callback used to perform the pretext task of reconstruct the original data after a binary mask has been applied.
@@ -40,7 +40,8 @@ class PatchMaskCB(Callback):
         """
         self.patch_len = patch_len
         self.stride = stride
-        self.mask_ratio = mask_ratio        
+        self.mask_ratio = mask_ratio
+        self.mask_value = mask_value
 
     def before_fit(self):
         # overwrite the predefined loss function
@@ -54,7 +55,7 @@ class PatchMaskCB(Callback):
         xb: [bs x seq_len x n_vars] -> [bs x num_patch x n_vars x patch_len]
         """
         xb_patch, num_patch = create_patch(self.xb, self.patch_len, self.stride)    # xb_patch: [bs x num_patch x n_vars x patch_len]
-        xb_mask, _, self.mask, _ = random_masking(xb_patch, self.mask_ratio)   # xb_mask: [bs x num_patch x n_vars x patch_len]
+        xb_mask, _, self.mask, _ = random_masking(xb_patch, self.mask_ratio, self.mask_value)   # xb_mask: [bs x num_patch x n_vars x patch_len]
         #print("Mean mask incidence:", self.mask.mean())
         self.mask = self.mask.bool()    # mask: [bs x num_patch x n_vars]
         self.learner.xb = xb_mask       # learner.xb: masked 4D tensor    
@@ -114,10 +115,11 @@ class ObservationMaskCB(Callback):
     Function that evaluates loss on the masked items only
     """
 
-    def __init__(self, mask_ratio):
+    def __init__(self, mask_ratio, mask_value):
         """
         Mask random observations in the raw (prepatched) input data"""
         self.mask_ratio = mask_ratio
+        self.mask_value = mask_value
 
     def before_fit(self):
         # overwrite the predefined loss function
@@ -131,7 +133,7 @@ class ObservationMaskCB(Callback):
         """
         xb: [bs x seq_len x n_vars] -> [bs x seq_len x n_vars]
         """
-        xb_mask, _, mask, _ = random_masking_3D(self.xb, self.mask_ratio)   # xb_mask: [bs x seq_len x n_vars]
+        xb_mask, _, mask, _ = random_masking_3D(self.xb, self.mask_ratio, self.mask_value)   # xb_mask: [bs x seq_len x n_vars]
         #print("Mean mask incidence:", self.mask.mean())
         self.mask = mask.bool()    # mask: [seq_len x n_vars]
         self.xb = xb_mask      # learner.xb: masked 3D input tensor
@@ -148,7 +150,7 @@ class ObservationMaskCB(Callback):
         logging.debug(f"ObservationMaskCB custom loss: preds {preds.shape}, target {target.shape}, mask {self.mask.shape}")
         return loss
 
-def random_masking(xb, mask_ratio):
+def random_masking(xb, mask_ratio, mask_value=0):
     # xb: [bs x num_patch x n_vars x patch_len]
     bs, L, nvars, D = xb.shape
     x = xb.clone()
@@ -166,8 +168,7 @@ def random_masking(xb, mask_ratio):
     x_kept = torch.gather(x, dim=1, index=ids_keep.unsqueeze(-1).repeat(1, 1, 1, D))     # x_kept: [bs x len_keep x nvars  x patch_len]
    
     # removed x
-    # TODO: Masking is done by applying a 0 to values. Think about if this is this is suitable in our context?
-    x_removed = torch.zeros(bs, L-len_keep, nvars, D, device=xb.device)                 # x_removed: [bs x (L-len_keep) x nvars x patch_len]
+    x_removed = torch.ones(bs, L-len_keep, nvars, D, device=xb.device) * mask_value  # x_removed: [bs x (L-len_keep) x nvars x patch_len]
     x_ = torch.cat([x_kept, x_removed], dim=1)                                          # x_: [bs x L x nvars x patch_len]
 
     # combine the kept part and the removed one
@@ -181,7 +182,7 @@ def random_masking(xb, mask_ratio):
     return x_masked, x_kept, mask, ids_restore
 
 
-def random_masking_3D(xb, mask_ratio):
+def random_masking_3D(xb, mask_ratio, mask_value=0):
     # xb: [bs x seq_len x n_vars]
     """
     Args:
@@ -206,8 +207,7 @@ def random_masking_3D(xb, mask_ratio):
     x_kept = torch.gather(x, dim=1, index=ids_keep.unsqueeze(-1).repeat(1, 1, bs ))        # x_kept: [n_vars x len_keep x bs]
    
     # removed x
-    # TODO: Masking is done by applying a 0 to values. Think about if this is this is suitable in our context?
-    x_removed = torch.zeros(n_vars, seq_len-len_keep, bs, device=xb.device)                        # x_removed: [n_vars x (seq_len-len_keep) x bs]
+    x_removed = torch.ones(n_vars, seq_len-len_keep, bs, device=xb.device) * mask_value   # x_removed: [n_vars x (seq_len-len_keep) x bs]
     x_ = torch.cat([x_kept, x_removed], dim=1)                                          # x_: [bs x seq_len x dim]
 
     # combine the kept part and the removed one

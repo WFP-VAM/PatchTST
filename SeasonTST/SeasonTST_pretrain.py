@@ -57,6 +57,7 @@ def pretrain_func(save_pretrained_model, save_path, config_obj, model, dls, lr=0
             patch_len=config_obj.patch_len,
             stride=config_obj.stride,
             mask_ratio=config_obj.mask_ratio,
+            mask_value=config_obj.mask_value
         ),
         SaveModelCB(monitor="valid_loss", fname=save_pretrained_model, path=save_path),
     ]
@@ -93,6 +94,7 @@ config = {
     "stride": 4,  # Minimum non-overlap between patchs. If equal to patch_len , patches will not overlap
     "revin": 1,  # reversible instance normalization
     "mask_ratio": 0.4,  # masking ratio for the input
+    "mask_value": -99, # Value to assign to masked elements of data input
     "lr": 1e-3,
     "batch_size": 128,
     "num_workers": 0,
