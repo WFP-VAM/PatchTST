@@ -223,6 +223,13 @@ class SeasonTST_Dataset(TorchDataset):
     def get_split_dataset(self):
         return self.dataset.isel(time=slice(*self.time_idxs))
 
+    def is_not_masked(self, selector: list[dict]):
+        # Returns True if north west pixel of batch is not masked
+        selector = selector[0]
+        return not self.mask.isel(
+            {"latitude": selector["latitude"], "longitude": selector["longitude"]}
+        ).values[0][0]
+
     def set_batch_generator(self):
 
         data = self.get_split_dataset()
@@ -230,11 +237,24 @@ class SeasonTST_Dataset(TorchDataset):
         series_len = self.seq_len + self.label_len + self.pred_len
 
         # For info: https://xbatcher.readthedocs.io/en/latest/demo.html
-        self.batch_gen = data.batch.generator(
+        batch_gen = data.batch.generator(
             input_dims={"time": series_len, "longitude": 1, "latitude": 1},
             input_overlap={"time": series_len - 1},
             preload_batch=False,
         )
+
+        # Filter batch selectors based on mask
+        selectors = [
+            selector
+            for idx, selector in batch_gen._batch_selectors.selectors.items()
+            if self.is_not_masked(selector)
+        ]
+
+        # Re-index selectors and overwrite in batch_gen
+        selectors = {idx: selector for idx, selector in enumerate(selectors)}
+        batch_gen._batch_selectors.selectors = selectors
+
+        self.batch_gen = batch_gen
 
     def __len__(self):
         return len(self.batch_gen)
@@ -255,13 +275,6 @@ class SeasonTST_Dataset(TorchDataset):
         logging.debug(
             f"{batch.latitude.values}, {batch.longitude.values}, {batch.time.values[0]}"
         )
-        # print(idx)
-
-        # if selected pixel is over ocean get another
-        # while self.mask.sel(latitude=batch.latitude.values,longitude=batch.longitude.values).values==-99:
-        # select another index somehow
-        # newidx =
-        # batch = self.batch_gen[newidx].load()
 
         # Stack to [time x var] shape
         stacked = (
@@ -273,6 +286,7 @@ class SeasonTST_Dataset(TorchDataset):
         )
 
         # Split time axis into input and ouput
+        # TODO This split assumes  self.label_len is always 0.
         x = stacked.isel(time=slice(None, self.seq_len))
         y = stacked.isel(time=slice(self.seq_len, None))
 
