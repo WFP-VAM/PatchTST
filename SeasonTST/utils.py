@@ -8,7 +8,7 @@ from torch.utils.data import Dataset
 from PatchTST_self_supervised.src.callback.patch_mask import PatchMaskCB
 from PatchTST_self_supervised.src.callback.transforms import RevInCB
 from PatchTST_self_supervised.src.data.datamodule import DataLoaders
-from PatchTST_self_supervised.src.learner import Learner
+from PatchTST_self_supervised.src.learner import Learner, transfer_weights
 from PatchTST_self_supervised.src.models.patchTST import PatchTST
 from SeasonTST.dataset import SeasonTST_Dataset
 
@@ -37,7 +37,7 @@ def get_dls(
     return dls
 
 
-def get_model(config, headtype="pretrain"):
+def get_model(config, headtype="pretrain", weights_path=None):
     stride = config.stride
     # get number of patches
     num_patch = (
@@ -67,6 +67,10 @@ def get_model(config, headtype="pretrain"):
         "number of model params",
         sum(p.numel() for p in model.parameters() if p.requires_grad),
     )
+    if weights_path is not None:
+        logging.info(f"Loading weights from {weights_path}")
+        model = transfer_weights(weights_path, model)
+
     return model
 
 
