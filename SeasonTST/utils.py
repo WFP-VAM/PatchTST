@@ -30,6 +30,7 @@ def get_dls(
         },
         batch_size=config_obj.batch_size,
         workers=config_obj.num_workers,
+        prefetch_factor=config_obj.prefetch_factor
     )
 
     dls.vars, dls.len = dls.train.dataset[0][0].shape[1], config_obj.sequence_length

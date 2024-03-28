@@ -15,6 +15,8 @@ class DataLoaders:
         shuffle_train = True,
         shuffle_val = False,
         drop_last = True,
+        prefetch_factor = None
+
     ):
         super().__init__()
         self.datasetCls = datasetCls
@@ -27,6 +29,7 @@ class DataLoaders:
         self.collate_fn = collate_fn
         self.shuffle_train, self.shuffle_val = shuffle_train, shuffle_val
         self.drop_last = drop_last
+        self.prefetch_factor = prefetch_factor
     
         self.train = self.train_dataloader()
         self.valid = self.val_dataloader()
@@ -51,7 +54,8 @@ class DataLoaders:
             batch_size=self.batch_size,
             num_workers=self.workers,
             collate_fn=self.collate_fn,
-            drop_last=self.drop_last
+            drop_last=self.drop_last,
+            prefetch_factor=self.prefetch_factor
         )
 
     @classmethod
