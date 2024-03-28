@@ -27,8 +27,8 @@ class SeasonTST_Dataset(TorchDataset):
         dataset: xr.Dataset,
         mask: xr.DataArray,
         size=None,
-        train_size=0.33,
-        val_size=0.33,
+        train_size=0.70,
+        val_size=0.15,
         split="train",
         scale=True,
     ):
@@ -95,6 +95,7 @@ class SeasonTST_Dataset(TorchDataset):
 
         series_len = self.seq_len + self.label_len + self.pred_len
 
+        logging.info(f"Generating batches for {self.split} split")
         # For info: https://xbatcher.readthedocs.io/en/latest/demo.html
         batch_gen = data.batch.generator(
             input_dims={"time": series_len, "longitude": 1, "latitude": 1},
@@ -103,6 +104,7 @@ class SeasonTST_Dataset(TorchDataset):
         )
 
         # Filter batch selectors based on mask
+        logging.info(f"Filtering batch selectors based on mask for {self.split} split")
         selectors = [
             selector
             for idx, selector in batch_gen._batch_selectors.selectors.items()
@@ -112,6 +114,8 @@ class SeasonTST_Dataset(TorchDataset):
         # Re-index selectors and overwrite in batch_gen
         selectors = {idx: selector for idx, selector in enumerate(selectors)}
         batch_gen._batch_selectors.selectors = selectors
+
+        logging.info(f"Completed generating {len(batch_gen)} batches for {self.split} split")
 
         self.batch_gen = batch_gen
 
