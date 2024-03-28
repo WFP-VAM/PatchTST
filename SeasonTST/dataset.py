@@ -1,7 +1,7 @@
 import logging
 import multiprocessing
 import time
-
+import json
 import numpy as np
 import pandas as pd
 import torch
@@ -115,7 +115,9 @@ class SeasonTST_Dataset(TorchDataset):
         selectors = {idx: selector for idx, selector in enumerate(selectors)}
         batch_gen._batch_selectors.selectors = selectors
 
-        logging.info(f"Completed generating {len(batch_gen)} batches for {self.split} split")
+        logging.info(
+            f"Completed generating {len(batch_gen)} batches for {self.split} split"
+        )
 
         self.batch_gen = batch_gen
 
@@ -125,12 +127,14 @@ class SeasonTST_Dataset(TorchDataset):
     def __getitem__(self, idx):
         t0 = time.time()
         logging.debug(
-            {
-                "event": "get-batch start",
-                "time": t0,
-                "idx": idx,
-                "pid": multiprocessing.current_process().pid,
-            }
+            json.dumps(
+                {
+                    "event": "get-batch start",
+                    "time": t0,
+                    "idx": idx,
+                    "pid": multiprocessing.current_process().pid,
+                }
+            )
         )
 
         # load before stacking
@@ -155,13 +159,15 @@ class SeasonTST_Dataset(TorchDataset):
 
         t1 = time.time()
         logging.debug(
-            {
-                "event": "get-batch end",
-                "time": t1,
-                "idx": idx,
-                "pid": multiprocessing.current_process().pid,
-                "duration": t1 - t0,
-            }
+            json.dumps(
+                {
+                    "event": "get-batch end",
+                    "time": t1,
+                    "idx": idx,
+                    "pid": multiprocessing.current_process().pid,
+                    "duration": t1 - t0,
+                }
+            )
         )
         return torch.tensor(x.data, dtype=torch.float32), torch.tensor(
             y.data, dtype=torch.float32
