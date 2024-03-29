@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(module)s - %(funcName)s: %(message)s",
     datefmt="%m/%d/%Y %I:%M:%S %p",
-    filename=f'log/{datetime.datetime.now().strftime("%Y_%m_%d_%I:%M")}_train.log',
+    filename=f'logs/{datetime.datetime.now().strftime("%Y_%m_%d_%I:%M")}_train.log',
     encoding="utf-8",
     level=logging.DEBUG,
 )
@@ -115,10 +115,11 @@ data = data.drop_vars("spatial_ref")
 data = data.transpose("time", "latitude", "longitude")
 # downselect to only every 5 pixels
 data = data.thin({"latitude": 5, "longitude": 5})
+
 # create ocean mask
 mask = data["RFH_DEKAD"][-1].where(data["RFH_DEKAD"][-1] == -99, 0)
 mask = mask.drop_duplicates(dim="longitude")
-
+mask = mask==-99 # Ensure boolean mask
 
 # Creates train valid and test datasets for one epoch. Notice that they are in different locations!
 dls = get_dls(config_obj, SeasonTST_Dataset, data, mask)
