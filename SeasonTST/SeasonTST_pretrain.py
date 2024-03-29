@@ -7,6 +7,10 @@ import torch
 import xarray as xr
 from dask.cache import Cache
 
+# adding PatchTST to the system path (necessary for windows machines)
+#import sys
+#sys.path.insert(0, r"C:\Users\15133\Documents\WFP\PatchTST")
+
 from PatchTST_self_supervised.src.callback.patch_mask import PatchMaskCB
 from PatchTST_self_supervised.src.callback.tracking import SaveModelCB
 from PatchTST_self_supervised.src.callback.transforms import RevInCB
@@ -14,9 +18,6 @@ from PatchTST_self_supervised.src.learner import Learner, transfer_weights
 from SeasonTST.dataset import SeasonTST_Dataset
 from SeasonTST.utils import find_lr, get_dls, get_model
 
-# adding PatchTST to the system path (necessary for windows machines)
-#import sys
-#sys.path.insert(0, r"C:\Users\15133\Documents\WFP\PatchTST")
 
 
 # Set up Dask's cache. Will reduce repeat reads from zarr and speed up data loading
@@ -30,7 +31,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(module)s - %(funcName)s: %(message)s",
     datefmt="%m/%d/%Y %I:%M:%S %p",
-    filename=f'logs/{datetime.datetime.now().strftime("%Y_%m_%d_%I:%M")}_train.log',
+    filename=f'logs/{datetime.datetime.now().strftime("%Y_%m_%d_%I_%M")}_train.log',
     encoding="utf-8",
     level=logging.DEBUG,
 )
@@ -84,69 +85,84 @@ def pretrain_func(save_pretrained_model, save_path, config_obj, model, dls, lr=0
 
     return train_loss, valid_loss
 
+def load_config():
+    # Config parameters
+    config = {
+        "c_in": 5,  # number of variables
+        "sequence_length": 36,
+        "prediction_length": 0,
+        "patch_len": 4,  # Length of the patch
+        "stride": 4,  # Minimum non-overlap between patchs. If equal to patch_len , patches will not overlap
+        "revin": 1,  # reversible instance normalization
+        "mask_ratio": 0.4,  # masking ratio for the input
+        "mask_value": -99, # Value to assign to masked elements of data input
+        "lr": 1e-3,
+        "batch_size": 128,
+        "prefetch_factor": 3,
+        "num_workers": 6,
+        "n_epochs_pretrain": 1,  # number of pre-training epochs
+        "pretrained_model_id": 2500,  # id of the saved pretrained model
+    }
 
-# Config parameters
-config = {
-    "c_in": 5,  # number of variables
-    "sequence_length": 36,
-    "prediction_length": 0,
-    "patch_len": 4,  # Length of the patch
-    "stride": 4,  # Minimum non-overlap between patchs. If equal to patch_len , patches will not overlap
-    "revin": 1,  # reversible instance normalization
-    "mask_ratio": 0.4,  # masking ratio for the input
-    "mask_value": -99, # Value to assign to masked elements of data input
-    "lr": 1e-3,
-    "batch_size": 128,
-    "num_workers": 0,
-    "n_epochs_pretrain": 1,  # number of pre-training epochs
-    "pretrained_model_id": 2500,  # id of the saved pretrained model
-}
+    config_obj = SimpleNamespace(**config)
+    return config_obj
 
-config_obj = SimpleNamespace(**config)
+def load_data():
 
-# Load dataset. Ensure it has no nans
-PREFIX = "https://data.earthobservation.vam.wfp.org/public-share/"
-standardized_indicators = xr.open_zarr(PREFIX + "patchtst/Africa_data.zarr")
-data = standardized_indicators.sel(
-    longitude=slice(9, 12), latitude=slice(-1, -3), time=slice("2003-01-01", None)
-)
-data = data.where(data.notnull(), -99)
-data = data.drop_vars("spatial_ref")
-data = data.transpose("time", "latitude", "longitude")
-# downselect to only every 5 pixels
-data = data.thin({"latitude": 5, "longitude": 5})
+    # Load dataset. Ensure it has no nans
+    PREFIX = "https://data.earthobservation.vam.wfp.org/public-share/"
+    data = xr.open_zarr(PREFIX + "patchtst/Africa_data.zarr")
+    data = data.sel(
+        longitude=slice(9, 12), latitude=slice(-1, -3), time=slice("2003-01-01", None)
+    )
+    # downselect to only every 5 pixels
+    data = data.thin({"latitude": 5, "longitude": 5})
+    logging.info(f"Dataset dimensions: {data.dims}")
 
-# create ocean mask
-mask = data["RFH_DEKAD"][-1].where(data["RFH_DEKAD"][-1] == -99, 0)
-mask = mask.drop_duplicates(dim="longitude")
-mask = mask==-99 # Ensure boolean mask
+    data = data.where(data.notnull(), -99)
+    data = data.drop_vars("spatial_ref")
+    data = data.transpose("time", "latitude", "longitude")
 
-# Creates train valid and test datasets for one epoch. Notice that they are in different locations!
-dls = get_dls(config_obj, SeasonTST_Dataset, data, mask)
+    # create ocean mask
+    mask = data["RFH_DEKAD"][-1].where(data["RFH_DEKAD"][-1] == -99, 0)
+    mask = mask.drop_duplicates(dim="longitude")
+    mask = mask == -99  # Make boolean
 
-model = get_model(config_obj)
+    return data, mask
 
-# suggested_lr = find_lr(config_obj, dls)
-# This is what I got on a small dataset. In case one wants to skip this for testing.
-suggested_lr = 0.00020565123083486514
+def main():
+    data, mask = load_data()
+    config_obj = load_config()
 
-save_pretrained_model = (
-    "patchtst_pretrained_cw"
-    + str(config_obj.sequence_length)
-    + "_patch"
-    + str(config_obj.patch_len)
-    + "_stride"
-    + str(config_obj.stride)
-    + "_epochs-pretrain"
-    + str(config_obj.n_epochs_pretrain)
-    + "_mask"
-    + str(config_obj.mask_ratio)
-    + "_model"
-    + str(config_obj.pretrained_model_id)
-)
-save_path = "saved_models" + "/masked_patchtst/"
-pretrain_func(save_pretrained_model, save_path, config_obj, model, dls, suggested_lr)
+    # Creates train valid and test datasets for one epoch. Notice that they are in different locations!
+    dls = get_dls(config_obj, SeasonTST_Dataset, data, mask)
 
-pretrained_model_name = save_path + save_pretrained_model + ".pth"
+    model = get_model(config_obj)
 
-model = transfer_weights(pretrained_model_name, model)
+    # suggested_lr = find_lr(config_obj, dls)
+    # This is what I got on a small dataset. In case one wants to skip this for testing.
+    suggested_lr = 0.00020565123083486514
+
+    save_pretrained_model = (
+        "patchtst_pretrained_cw"
+        + str(config_obj.sequence_length)
+        + "_patch"
+        + str(config_obj.patch_len)
+        + "_stride"
+        + str(config_obj.stride)
+        + "_epochs-pretrain"
+        + str(config_obj.n_epochs_pretrain)
+        + "_mask"
+        + str(config_obj.mask_ratio)
+        + "_model"
+        + str(config_obj.pretrained_model_id)
+    )
+    save_path = "saved_models" + "/masked_patchtst/"
+    pretrain_func(save_pretrained_model, save_path, config_obj, model, dls, suggested_lr)
+
+    pretrained_model_name = save_path + save_pretrained_model + ".pth"
+
+    model = transfer_weights(pretrained_model_name, model)
+
+if __name__ == "__main__":
+    main()
