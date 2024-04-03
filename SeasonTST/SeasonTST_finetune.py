@@ -17,7 +17,7 @@ from PatchTST_self_supervised.src.metrics import mse, mae
 
 import logging
 import datetime
-
+import dask
 
 #
 # SETUP
@@ -26,7 +26,7 @@ import datetime
 # Set up Dask's cache. Will reduce repeat reads from zarr and speed up data loading
 cache = Cache(1e10)  # 10gb cache
 cache.register()
-
+#dask.config.set(scheduler="threads", num_workers=2)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -58,6 +58,25 @@ def finetune_func(learner, save_path, args, lr=0.001):
 
 
 def get_learner(args, dls, lr, model):
+    """
+    Learner set-up
+
+    TRAINING
+    - Input is [bs, seq_len, n_vars]
+    - Before forward pass:
+        - RevInCB normalized inputs
+        - ObservationMaskCB masks random observations with fill value
+        - PatchCB reshaped to [bs, num_patches, n_vars, patch_len]
+    - Forward pass in: [bs, num_patches, n_vars, patch_len]; out: [bs, pred_len, n_vars]
+    - After forward pass
+        - RevInCB denormalized outputs
+        - ObservationMaskCB custom loss function on outputs for just the masked values
+        - Loss is therefore mean squared difference on denormalized masked values.
+        - Will give more weight to variables with larger numerical range
+    """
+
+
+
     # get loss
     loss_func = torch.nn.MSELoss(reduction="mean")
     # get callbacks
@@ -117,8 +136,8 @@ def load_config():
         "num_workers": 6,
         "prefetch_factor": 3,
         "n_epochs_pretrain": 1,  # number of pre-training epochs,
-        "freeze_epochs": 1,
-        "n_epochs_finetune": 0,
+        "freeze_epochs": 0,
+        "n_epochs_finetune": 50,
         "pretrained_model_id": 2500,  # id of the saved pretrained model
         "save_finetuned_model": "./finetuned_d128",
         "save_path": "saved_models" + "/masked_patchtst/",
@@ -177,15 +196,18 @@ def main():
 
     config_obj, save_path, pretrained_model_path = load_config()
 
+    # This creates a new model using pretrained weights as a start
+    # Use the finetuned checkpoint instead
+    path = save_path + config_obj.save_finetuned_model[2:] + ".pth"
+    model = get_model(
+        config_obj, headtype="prediction", weights_path=path
+    )
+
     # Create dataloader
     dls = get_dls(config_obj, SeasonTST_Dataset, data, mask)
 
-    # This creates a new model using pretrained weights as a start
-    model = get_model(
-        config_obj, headtype="prediction", weights_path=pretrained_model_path
-    )
 
-    # suggested_lr = find_lr(config_obj, dls)
+    #suggested_lr = find_lr(config_obj, dls)
     # This is what I got on a small dataset. In case one wants to skip this for testing.
     suggested_lr = 0.00020565123083486514
 
