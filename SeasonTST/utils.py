@@ -38,7 +38,7 @@ def get_dls(
     return dls
 
 
-def get_model(config, headtype="pretrain", weights_path=None):
+def get_model(config, headtype="pretrain", weights_path=None, exclude_head=True):
     stride = config.stride
     # get number of patches
     num_patch = (
@@ -70,7 +70,7 @@ def get_model(config, headtype="pretrain", weights_path=None):
     )
     if weights_path is not None:
         logging.info(f"Loading weights from {weights_path}")
-        model = transfer_weights(weights_path, model)
+        model = transfer_weights(weights_path, model, exclude_head)
 
     return model
 
@@ -123,3 +123,31 @@ def plot_loss(train_loss, valid_loss, save_path):
     plt.grid(True)
     plt.savefig(os.path.join(save_path, f"loss_plot_epoch.png"))
     plt.show()
+
+
+def load_data():
+
+    # Load dataset. Ensure it has no nans
+    PREFIX = "https://data.earthobservation.vam.wfp.org/public-share/"
+    data = xr.open_zarr(PREFIX + "patchtst/Africa_data.zarr")
+    data = data.sel(
+        longitude=slice(9, 12), latitude=slice(-1, -3), time=slice("2003-01-01", None)
+    )
+    # downselect to only every 5 pixels
+    data = data.thin({"latitude": 5, "longitude": 5})
+    logging.info(f"Dataset dimensions: {data.dims}")
+
+    data = data.where(data.notnull(), -99)
+    data = data.drop_vars("spatial_ref")
+    data = data.transpose("time", "latitude", "longitude")
+
+    # create ocean mask
+    mask = data.sel(time=data.time.values[-1]).where((data.sel(time=data.time.values[-1]) == -99), 0)
+    mask = mask.drop_duplicates(dim="longitude")
+    mask = sum([mask[v] for v in list(mask.keys())])
+    mask = mask.where(mask==0,-99)
+    mask = mask == -99  # Make boolean
+    mask = mask.compute()
+
+    return data, mask
+

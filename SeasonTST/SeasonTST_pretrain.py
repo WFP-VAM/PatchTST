@@ -1,10 +1,8 @@
 import os
 from types import SimpleNamespace
 
-import numpy as np
 import pandas as pd
 import torch
-import xarray as xr
 from dask.cache import Cache
 
 # adding PatchTST to the system path (necessary for windows machines)
@@ -16,9 +14,7 @@ from PatchTST_self_supervised.src.callback.tracking import SaveModelCB
 from PatchTST_self_supervised.src.callback.transforms import RevInCB
 from PatchTST_self_supervised.src.learner import Learner, transfer_weights
 from SeasonTST.dataset import SeasonTST_Dataset
-from SeasonTST.utils import find_lr, get_dls, get_model
-
-
+from SeasonTST.utils import get_dls, get_model, load_data
 
 # Set up Dask's cache. Will reduce repeat reads from zarr and speed up data loading
 cache = Cache(1e10)  # 10gb cache
@@ -107,31 +103,6 @@ def load_config():
     config_obj = SimpleNamespace(**config)
     return config_obj
 
-def load_data():
-
-    # Load dataset. Ensure it has no nans
-    PREFIX = "https://data.earthobservation.vam.wfp.org/public-share/"
-    data = xr.open_zarr(PREFIX + "patchtst/Africa_data.zarr")
-    data = data.sel(
-        longitude=slice(9, 12), latitude=slice(-1, -3), time=slice("2003-01-01", None)
-    )
-    # downselect to only every 5 pixels
-    data = data.thin({"latitude": 5, "longitude": 5})
-    logging.info(f"Dataset dimensions: {data.dims}")
-
-    data = data.where(data.notnull(), -99)
-    data = data.drop_vars("spatial_ref")
-    data = data.transpose("time", "latitude", "longitude")
-
-    # create ocean mask
-    mask = data.sel(time=data.time.values[-1]).where((data.sel(time=data.time.values[-1]) == -99), 0)
-    mask = mask.drop_duplicates(dim="longitude")
-    mask = sum([mask[v] for v in list(mask.keys())])
-    mask = mask.where(mask==0,-99)
-    mask = mask == -99  # Make boolean
-    mask = mask.compute()
-
-    return data, mask
 
 def main():
     data, mask = load_data()
