@@ -177,8 +177,9 @@ def main():
     # This creates a new model using pretrained weights as a start
     # Use the finetuned checkpoint instead
     path = save_path + config_obj.save_finetuned_model[2:] + ".pth"
+    #path = pretrained_model_path
     model = get_model(
-        config_obj, headtype="prediction", weights_path=path
+        config_obj, headtype="prediction", weights_path=path, exclude_head=False
     )
 
     # Create dataloader
