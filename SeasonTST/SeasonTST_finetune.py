@@ -181,9 +181,12 @@ def load_data():
     data = data.transpose("time", "latitude", "longitude")
 
     # create ocean mask
-    mask = data["RFH_DEKAD"][-1].where(data["RFH_DEKAD"][-1] == -99, 0)
+    mask = data.sel(time=data.time.values[-1]).where((data.sel(time=data.time.values[-1]) == -99), 0)
     mask = mask.drop_duplicates(dim="longitude")
+    mask = sum([mask[v] for v in list(mask.keys())])
+    mask = mask.where(mask == 0, -99)
     mask = mask == -99  # Make boolean
+    mask = mask.compute()
 
     return data, mask
 

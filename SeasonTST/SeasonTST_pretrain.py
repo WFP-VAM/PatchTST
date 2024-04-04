@@ -129,6 +129,7 @@ def load_data():
     mask = sum([mask[v] for v in list(mask.keys())])
     mask = mask.where(mask==0,-99)
     mask = mask == -99  # Make boolean
+    mask = mask.compute()
 
     return data, mask
 
