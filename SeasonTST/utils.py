@@ -137,6 +137,9 @@ def load_data():
     data = data.thin({"latitude": 5, "longitude": 5})
     logging.info(f"Dataset dimensions: {data.dims}")
 
+    # just one pixel
+    data = data.isel(longitude=slice(0,2), latitude=slice(0,2))
+
     data = data.where(data.notnull(), -99)
     data = data.drop_vars("spatial_ref")
     data = data.transpose("time", "latitude", "longitude")
