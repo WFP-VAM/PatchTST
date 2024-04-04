@@ -26,7 +26,6 @@ def get_dls(
             "dataset": dataset,
             "mask": mask,
             "size": size,
-            "scale": True,
         },
         batch_size=config_obj.batch_size,
         workers=config_obj.num_workers,
@@ -95,6 +94,7 @@ def find_lr(config_obj, dls):
             patch_len=config_obj.patch_len,
             stride=config_obj.stride,
             mask_ratio=config_obj.mask_ratio,
+            mask_value=-99
         )
     ]
 

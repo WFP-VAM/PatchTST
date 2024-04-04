@@ -30,7 +30,7 @@ class TimeLatLonDataset(TorchDataset):
         train_size=0.70,
         val_size=0.15,
         split="train",
-        scale=True,
+        scaling_factors=None
     ):
 
         if size is None:
@@ -56,8 +56,7 @@ class TimeLatLonDataset(TorchDataset):
         self.val_size = val_size
         self.set_split_time_idxs()
 
-        # TODO: StandardScaling is not currently implemented
-        self.scale = scale
+        self.scaling_factors = scaling_factors
 
         # Create generator of batches of size extracted from the dataset
         self.set_batch_generator()
@@ -121,6 +120,12 @@ class TimeLatLonDataset(TorchDataset):
 
         self.batch_gen = batch_gen
 
+    def scale(self, batch):
+
+        for var, data_var in batch.data_vars.items():
+            batch[var] = (data_var - self.scaling_factors['mean'][var]) / self.scaling_factors['mean'][var]
+        return batch
+
     def __len__(self):
         return len(self.batch_gen)
 
@@ -142,6 +147,9 @@ class TimeLatLonDataset(TorchDataset):
         logging.debug(
             f"{batch.latitude.values}, {batch.longitude.values}, {batch.time.values[0]}"
         )
+
+        if self.scaling_factors is not None:
+            batch = self.scale(batch)
 
         # Stack to [time x var] shape
         stacked = (
@@ -178,7 +186,7 @@ class SeasonTST_Dataset(TimeLatLonDataset):
     def __init__(self, scaling_factors: dict = None, **kw_args):
         # TODO Include required parent positional arguments in __init__
         if scaling_factors is None:
-            scaling_factors = {
+            kw_args['scaling_factors'] = {
                 "mean": {
                     "ET0": 5.805,
                     "LST_SMOOTHED_5KM": 38.99,
@@ -194,5 +202,5 @@ class SeasonTST_Dataset(TimeLatLonDataset):
                     "SOIL_MOIST": 0.1336,
                 },
             }
-        self.scaling_factors = scaling_factors
+
         super().__init__(**kw_args)
