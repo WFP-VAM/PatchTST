@@ -82,7 +82,7 @@ def get_learner(args, dls, lr, model):
     # get callbacks
     cbs = [RevInCB(dls.vars, denorm=True)] if args.revin else []
     cbs += [
-        ObservationMaskCB(mask_ratio=0.2, mask_value=-99),
+        #ObservationMaskCB(mask_ratio=0.2, mask_value=-99),
         PatchCB(patch_len=args.patch_len, stride=args.stride),
         SaveModelCB(
             monitor="valid_loss", fname=args.save_finetuned_model, path=args.save_path
@@ -124,9 +124,9 @@ def load_config():
     # Config parameters
     # TODO maybe load from a JSON with a model key?
     config = {
-        "c_in": 8,  # number of variables
+        "c_in": 5,  # number of variables
         "sequence_length": 36,
-        "prediction_length": 36,  # Sets both the dimension of y from the dataloader as well as the prediction head size
+        "prediction_length": 2,  # Sets both the dimension of y from the dataloader as well as the prediction head size
         "patch_len": 4,  # Length of the patch
         "stride": 4,  # Minimum non-overlap between patchs. If equal to patch_len , patches will not overlap
         "revin": 0,  # reversible instance normalization
@@ -187,7 +187,8 @@ def main():
 
     #suggested_lr = find_lr(config_obj, dls)
     # This is what I got on a small dataset. In case one wants to skip this for testing.
-    suggested_lr = 0.00020565123083486514
+    suggested_lr = 0.00017073526474706903
+    print(suggested_lr)
 
     learner = get_learner(config_obj, dls, suggested_lr, model)
 
