@@ -11,7 +11,7 @@ from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset as TorchDataset
 
 
-class SeasonTST_Dataset(TorchDataset):
+class TimeLatLonDataset(TorchDataset):
     """
     Subclass of Torch Dataset to accept any arbitrary xr.Dataset and creates batches using xbatcher.
     Together with shuffle=True, this achieves randomization of the extracted series across time and space.
@@ -172,3 +172,27 @@ class SeasonTST_Dataset(TorchDataset):
         return torch.tensor(x.data, dtype=torch.float32), torch.tensor(
             y.data, dtype=torch.float32
         )
+
+
+class SeasonTST_Dataset(TimeLatLonDataset):
+    def __init__(self, scaling_factors: dict = None, **kw_args):
+        # TODO Include required parent positional arguments in __init__
+        if scaling_factors is None:
+            scaling_factors = {
+                "mean": {
+                    "ET0": 5.805,
+                    "LST_SMOOTHED_5KM": 38.99,
+                    "NDVI_SMOOTHED_5KM": 0.3417,
+                    "RFH_DEKAD": 16.89,
+                    "SOIL_MOIST": 0.09117,
+                },
+                "std": {
+                    "ET0": 2.308,
+                    "LST_SMOOTHED_5KM": 9.665,
+                    "NDVI_SMOOTHED_5KM": 0.2629,
+                    "RFH_DEKAD": 29.48,
+                    "SOIL_MOIST": 0.1336,
+                },
+            }
+        self.scaling_factors = scaling_factors
+        super().__init__(**kw_args)
