@@ -129,7 +129,7 @@ def load_config():
         "prediction_length": 36,  # Sets both the dimension of y from the dataloader as well as the prediction head size
         "patch_len": 4,  # Length of the patch
         "stride": 4,  # Minimum non-overlap between patchs. If equal to patch_len , patches will not overlap
-        "revin": 1,  # reversible instance normalization
+        "revin": 0,  # reversible instance normalization
         "mask_ratio": 0.4,  # masking ratio for the input
         "lr": 1e-3,
         "batch_size": 128,
