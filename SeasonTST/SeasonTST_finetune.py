@@ -19,6 +19,10 @@ import logging
 import datetime
 import dask
 
+# https://github.com/pytorch/pytorch/issues/11201
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy('file_system')
+
 #
 # SETUP
 #
@@ -137,7 +141,7 @@ def load_config():
         "prefetch_factor": 3,
         "n_epochs_pretrain": 1,  # number of pre-training epochs,
         "freeze_epochs": 0,
-        "n_epochs_finetune": 50,
+        "n_epochs_finetune": 250,
         "pretrained_model_id": 2500,  # id of the saved pretrained model
         "save_finetuned_model": "./finetuned_d128",
         "save_path": "saved_models" + "/masked_patchtst/",
