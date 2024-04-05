@@ -21,7 +21,8 @@ import dask
 
 # https://github.com/pytorch/pytorch/issues/11201
 import torch.multiprocessing
-torch.multiprocessing.set_sharing_strategy('file_system')
+
+torch.multiprocessing.set_sharing_strategy("file_system")
 
 #
 # SETUP
@@ -30,7 +31,7 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 # Set up Dask's cache. Will reduce repeat reads from zarr and speed up data loading
 cache = Cache(1e10)  # 10gb cache
 cache.register()
-#dask.config.set(scheduler="threads", num_workers=2)
+# dask.config.set(scheduler="threads", num_workers=2)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -79,14 +80,12 @@ def get_learner(args, dls, lr, model):
         - Will give more weight to variables with larger numerical range
     """
 
-
-
     # get loss
     loss_func = torch.nn.MSELoss(reduction="mean")
     # get callbacks
     cbs = [RevInCB(dls.vars, denorm=True)] if args.revin else []
     cbs += [
-        #ObservationMaskCB(mask_ratio=0.2, mask_value=-99),
+        # ObservationMaskCB(mask_ratio=0.2, mask_value=-99),
         PatchCB(patch_len=args.patch_len, stride=args.stride),
         SaveModelCB(
             monitor="valid_loss", fname=args.save_finetuned_model, path=args.save_path
@@ -168,8 +167,6 @@ def load_config():
     return config_obj, save_path, pretrained_model_path
 
 
-
-
 #
 # FINE TUNING STEPS
 #
@@ -181,7 +178,7 @@ def main():
     # This creates a new model using pretrained weights as a start
     # Use the finetuned checkpoint instead
     path = save_path + config_obj.save_finetuned_model[2:] + ".pth"
-    #path = pretrained_model_path
+    # path = pretrained_model_path
     model = get_model(
         config_obj, headtype="prediction", weights_path=path, exclude_head=False
     )
@@ -189,8 +186,7 @@ def main():
     # Create dataloader
     dls = get_dls(config_obj, SeasonTST_Dataset, data, mask)
 
-
-    #suggested_lr = find_lr(config_obj, dls)
+    # suggested_lr = find_lr(config_obj, dls)
     # This is what I got on a small dataset. In case one wants to skip this for testing.
     suggested_lr = 0.00017073526474706903
     print(suggested_lr)

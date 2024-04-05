@@ -30,7 +30,7 @@ class TimeLatLonDataset(TorchDataset):
         train_size=0.70,
         val_size=0.15,
         split="train",
-        scaling_factors=None
+        scaling_factors=None,
     ):
 
         if size is None:
@@ -123,7 +123,9 @@ class TimeLatLonDataset(TorchDataset):
     def scale(self, batch):
 
         for var, data_var in batch.data_vars.items():
-            batch[var] = (data_var - self.scaling_factors['mean'][var]) / self.scaling_factors['mean'][var]
+            batch[var] = (
+                data_var - self.scaling_factors["mean"][var]
+            ) / self.scaling_factors["mean"][var]
         return batch
 
     def __len__(self):
@@ -186,7 +188,7 @@ class SeasonTST_Dataset(TimeLatLonDataset):
     def __init__(self, scaling_factors: dict = None, **kw_args):
         # TODO Include required parent positional arguments in __init__
         if scaling_factors is None:
-            kw_args['scaling_factors'] = {
+            kw_args["scaling_factors"] = {
                 "mean": {
                     "ET0": 5.805,
                     "LST_SMOOTHED_5KM": 38.99,

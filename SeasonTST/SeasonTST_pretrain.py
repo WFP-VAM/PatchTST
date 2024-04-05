@@ -6,8 +6,8 @@ import torch
 from dask.cache import Cache
 
 # adding PatchTST to the system path (necessary for windows machines)
-#import sys
-#sys.path.insert(0, r"C:\Users\15133\Documents\WFP\PatchTST")
+# import sys
+# sys.path.insert(0, r"C:\Users\15133\Documents\WFP\PatchTST")
 
 from PatchTST_self_supervised.src.callback.patch_mask import PatchMaskCB
 from PatchTST_self_supervised.src.callback.tracking import SaveModelCB
@@ -54,7 +54,7 @@ def pretrain_func(save_pretrained_model, save_path, config_obj, model, dls, lr=0
             patch_len=config_obj.patch_len,
             stride=config_obj.stride,
             mask_ratio=config_obj.mask_ratio,
-            mask_value=config_obj.mask_value
+            mask_value=config_obj.mask_value,
         ),
         SaveModelCB(monitor="valid_loss", fname=save_pretrained_model, path=save_path),
     ]
@@ -81,6 +81,7 @@ def pretrain_func(save_pretrained_model, save_path, config_obj, model, dls, lr=0
 
     return train_loss, valid_loss
 
+
 def load_config():
     # Config parameters
     config = {
@@ -91,7 +92,7 @@ def load_config():
         "stride": 4,  # Minimum non-overlap between patchs. If equal to patch_len , patches will not overlap
         "revin": 0,  # reversible instance normalization
         "mask_ratio": 0.4,  # masking ratio for the input
-        "mask_value": -99, # Value to assign to masked elements of data input
+        "mask_value": -99,  # Value to assign to masked elements of data input
         "lr": 1e-3,
         "batch_size": 128,
         "prefetch_factor": 3,
@@ -132,11 +133,14 @@ def main():
         + str(config_obj.pretrained_model_id)
     )
     save_path = "saved_models" + "/masked_patchtst/"
-    pretrain_func(save_pretrained_model, save_path, config_obj, model, dls, suggested_lr)
+    pretrain_func(
+        save_pretrained_model, save_path, config_obj, model, dls, suggested_lr
+    )
 
     pretrained_model_name = save_path + save_pretrained_model + ".pth"
 
     model = transfer_weights(pretrained_model_name, model)
+
 
 if __name__ == "__main__":
     main()

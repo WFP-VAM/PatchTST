@@ -29,7 +29,7 @@ def get_dls(
         },
         batch_size=config_obj.batch_size,
         workers=config_obj.num_workers,
-        prefetch_factor=config_obj.prefetch_factor
+        prefetch_factor=config_obj.prefetch_factor,
     )
 
     dls.vars, dls.len = dls.train.dataset[0][0].shape[1], config_obj.sequence_length
@@ -94,7 +94,7 @@ def find_lr(config_obj, dls):
             patch_len=config_obj.patch_len,
             stride=config_obj.stride,
             mask_ratio=config_obj.mask_ratio,
-            mask_value=-99
+            mask_value=-99,
         )
     ]
 
@@ -138,19 +138,20 @@ def load_data():
     logging.info(f"Dataset dimensions: {data.dims}")
 
     # just one pixel
-    data = data.isel(longitude=slice(0,2), latitude=slice(0,2))
+    data = data.isel(longitude=slice(0, 2), latitude=slice(0, 2))
 
     data = data.where(data.notnull(), -99)
     data = data.drop_vars("spatial_ref")
     data = data.transpose("time", "latitude", "longitude")
 
     # create ocean mask
-    mask = data.sel(time=data.time.values[-1]).where((data.sel(time=data.time.values[-1]) == -99), 0)
+    mask = data.sel(time=data.time.values[-1]).where(
+        (data.sel(time=data.time.values[-1]) == -99), 0
+    )
     mask = mask.drop_duplicates(dim="longitude")
     mask = sum([mask[v] for v in list(mask.keys())])
-    mask = mask.where(mask==0,-99)
+    mask = mask.where(mask == 0, -99)
     mask = mask == -99  # Make boolean
     mask = mask.compute()
 
     return data, mask
-
