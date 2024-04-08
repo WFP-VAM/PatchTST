@@ -2,6 +2,7 @@ name: PatchTST
 channels:
   - conda-forge
   - wfp-ram
+  - pytorch
 dependencies:
   - python =3.10
   - pip >=22
