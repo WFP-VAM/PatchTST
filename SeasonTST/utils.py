@@ -29,7 +29,7 @@ def get_dls(
         },
         batch_size=config_obj.batch_size,
         workers=config_obj.num_workers,
-        prefetch_factor=config_obj.prefetch_factor,
+        #prefetch_factor=config_obj.prefetch_factor,
     )
 
     dls.vars, dls.len = dls.train.dataset[0][0].shape[1], config_obj.sequence_length
@@ -128,7 +128,8 @@ def plot_loss(train_loss, valid_loss, save_path):
 def load_data():
 
     # Load dataset. Ensure it has no nans
-    PREFIX = "https://data.earthobservation.vam.wfp.org/public-share/"
+    #PREFIX = "https://data.earthobservation.vam.wfp.org/public-share/"
+    PREFIX = "/s3/scratch/public-share/"
     data = xr.open_zarr(PREFIX + "patchtst/Africa_data.zarr")
     data = data.sel(
         longitude=slice(9, 12), latitude=slice(-1, -3), time=slice("2003-01-01", None)

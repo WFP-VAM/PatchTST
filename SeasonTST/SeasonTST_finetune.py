@@ -136,8 +136,8 @@ def load_config():
         "mask_ratio": 0.4,  # masking ratio for the input
         "lr": 1e-3,
         "batch_size": 128,
-        "num_workers": 6,
-        "prefetch_factor": 3,
+        "num_workers": 0,
+        #"prefetch_factor": 3,
         "n_epochs_pretrain": 1,  # number of pre-training epochs,
         "freeze_epochs": 0,
         "n_epochs_finetune": 250,
