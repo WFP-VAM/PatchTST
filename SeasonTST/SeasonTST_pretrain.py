@@ -95,7 +95,7 @@ def load_config():
         "mask_value": -99,  # Value to assign to masked elements of data input
         "lr": 1e-3,
         "batch_size": 128,
-        #"prefetch_factor": 0,
+        "prefetch_factor": 2,
         "num_workers": 0,
         "n_epochs_pretrain": 1,  # number of pre-training epochs
         "pretrained_model_id": 2500,  # id of the saved pretrained model

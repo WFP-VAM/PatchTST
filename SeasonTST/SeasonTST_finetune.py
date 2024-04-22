@@ -137,7 +137,7 @@ def load_config():
         "lr": 1e-3,
         "batch_size": 128,
         "num_workers": 0,
-        #"prefetch_factor": 3,
+        "prefetch_factor": 2,
         "n_epochs_pretrain": 1,  # number of pre-training epochs,
         "freeze_epochs": 0,
         "n_epochs_finetune": 250,
