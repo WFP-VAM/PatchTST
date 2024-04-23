@@ -15,7 +15,7 @@ class DataLoaders:
         shuffle_train = True,
         shuffle_val = False,
         drop_last = True,
-        prefetch_factor = None
+        prefetch_factor: int= 2
 
     ):
         super().__init__()

@@ -128,7 +128,8 @@ def plot_loss(train_loss, valid_loss, save_path):
 def load_data():
 
     # Load dataset. Ensure it has no nans
-    PREFIX = "https://data.earthobservation.vam.wfp.org/public-share/"
+    #PREFIX = "https://data.earthobservation.vam.wfp.org/public-share/"
+    PREFIX = "/s3/scratch/public-share/"
     data = xr.open_zarr(PREFIX + "patchtst/Africa_data.zarr")
     data = data.sel(
         longitude=slice(9, 12), latitude=slice(-1, -3), time=slice("2003-01-01", None)
